@@ -1,0 +1,8 @@
+pandas
+numpy
+pytz
+PyYAML
+six
+joblib
+prettytable
+termcolor

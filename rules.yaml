@@ -1,0 +1,202 @@
+# This file defines rules for identifying suspicious web log entries in WebLogTriage.
+# Rules follow a Sigma-style format to detect patterns in log attributes (e.g., IP, URI, 
+# status). Upon identification a risk score is assigned to highlight potential threats.
+#
+# - Each rule specifies a single 'selection' block with conditions to match log entries.
+#   Multiple selections are currently unsupported. 
+# - Supported fields include: ip, method, status, request_uri, referrer, user_agent, 
+#  request_count, resp_size, uri_risk (URI-based risk score), status_risk (status code-based 
+#  risk score), method_risk (method-based risk score).
+# - Sigma-style value modifiers:
+#   - List-based: 'in' (matches any value in list), 'notin' (excludes list values),
+#     'cidr' (matches IPs in CIDR ranges, e.g., '192.168.1.0/24').
+#   - String-based: 'contains' (substring match), 'startswith', 'endswith', 'regex'.
+#   - Numeric (int/float): 'gte' (>=), 'gt' (>), 'lt' (<), 'lte' (<=), 'eq' (==), 'ne' (!=).
+# - Rule application: When multiple rules match a log entry, the rule with the highest
+#   risk_score is applied. Matching entries are tagged with the risk score and rule title.
+#
+# At some point better support for Sigma will be implemented. For now this will do. 
+#
+# Example:
+# A rule detects suspicious log entries by:
+# - Matching a URI like '/file.csv.php' (e.g. a potential webshell bypassed extension filtering), 
+#   which generates a uri_risk score of 70 or higher based on configuration.
+# - Checking for a HTTP status code (200, 201, or 202), indicating the request was processed.
+# - Assigning a risk_score of 90.0 and tagging the log entry with the rule title
+#   'Suspicious URI with Successful Status' to flag the potential threat.
+
+- title: Suspicious URI & OK Status
+  id: 123e4567-e89b-12d3-a456-426614174000
+  description: Detect high risk uri with successful status code
+  status: stable
+  logsource:
+    category: access_log
+  detection:
+    selection:
+      uri_risk|gte: 70
+      status: [200, 201, 202]
+    condition: selection
+  level: high
+  fields:
+    - uri_risk
+    - status
+  tags:
+    - risk_score: 90.0
+
+- title: Large Request Count & Server Error
+  id: 323e4567-e89b-12d3-a456-426614174002
+  description: Detect high number of repeat URI path requests with server error
+  status: stable
+  logsource:
+    category: access_log
+  detection:
+    selection:
+      request_count|gte: 500
+      status: [500, 502, 503, 504]
+    condition: selection
+  level: high
+  fields:
+    - status
+    - request_count
+  tags:
+    - risk_score: 80.0
+
+- title: Moderately suspicious URI & Server Error
+  id: 723e4567-e89b-12d3-a456-426614174007
+  description: Detect moderate risk uri with server error status
+  status: stable
+  logsource:
+    category: access_log
+  detection:
+    selection:
+      uri_risk|gte: 40
+      status: [500, 502, 503, 504]
+    condition: selection
+  level: moderate
+  fields:
+    - uri_risk
+    - status
+  tags:
+    - risk_score: 75.0
+
+- title: Suspicious Method & OK Status
+  id: 523e4567-e89b-12d3-a456-426614174004
+  description: Detect high risk method with successful status
+  status: stable
+  logsource:
+    category: access_log
+  detection:
+    selection:  
+      method_risk|gte: 70
+      status: [200, 201, 202]
+    condition: selection
+  level: moderate
+  fields:
+    - status
+    - method_risk
+  tags:
+    - risk_score: 70.0
+
+- title: Suspicious Referrer
+  id: c23e4568-f89a-24c3-c456-456718174013
+  description: Detect suspicious referrer
+  status: stable
+  logsource:
+    category: access_log
+  detection:
+    selection:
+      referrer|contains: fofa.info
+    condition: selection
+  level: high
+  fields:
+    - referrer
+  tags:
+    - risk_score: 67.5
+
+- title: Medium Request Count & Server Error
+  id: 423e4567-e89b-12d3-a456-426614174003
+  description: Detect medium request count with server error
+  status: stable
+  logsource:
+    category: access_log
+  detection:
+    selection:
+      request_count|gte: 200
+      request_count|lt: 500
+      status: [500, 502, 503, 504]
+    condition: selection
+  level: moderate
+  fields:
+    - status
+    - request_count
+  tags:
+    - risk_score: 65.0
+
+- title: Low Status Code Risk
+  id: 223e4567-e89b-12d3-a456-426614174001
+  description: Status code
+  status: stable
+  logsource:
+    category: access_log
+  detection:
+    selection:
+      status_risk|gte: 70
+    condition: selection
+  level: medium
+  fields:
+    - status_risk
+  tags:
+    - risk_score: 40.0
+
+- title: Moderate Method Risk & Request Count & OK Status
+  id: 623e4567-e89b-12d3-a456-426614174005
+  description: Detect moderate method risk with successful status
+  status: stable
+  logsource:
+    category: access_log
+  detection:
+    selection:
+      method_risk|gte: 20
+      method_risk|lt: 70
+      request_count|gte: 200
+      status: [200, 201, 202]
+    condition: selection
+  level: low
+  fields:
+    - status
+    - method_risk
+    - request_count
+  tags:
+    - risk_score: 41.0
+
+# - title: Suspicious Client IP & Status OK/SError
+#   id: b23e4567-e89b-12d3-a456-426614174011
+#   description: Detect requests from suspicious IP ranges
+#   status: stable
+#   logsource:
+#     category: access_log
+#   detection:
+#     selection:
+#       ip|cidr: ['20.20.20.0/20', '30.30.30.0/20']
+#       status: [200, 201, 202, 500, 502, 503, 504]
+#       request_uri|notin: ['/']
+#   tags:
+#     - risk_score: 26.0
+
+# - title: Suspicious User Agent
+#   id: b23e4567-e89b-12d3-a456-426614174011
+#   description: Detect suspicious user agent
+#   status: stable
+#   logsource:
+#     category: access_log
+#   detection:
+#     selection:
+#       user_agent:
+#         - 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+#         - 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0'
+#     condition: selection
+#   level: low
+#   fields:
+#     - user_agent
+#   tags:
+#     - risk_score: 19.0
