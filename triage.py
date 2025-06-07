@@ -19,7 +19,7 @@ def main():
         triage.py --path WebLogs/ --start-time "2025-04-21 18:23:00+10" --end-time "2025-04-21 18:24:00+10" --method POST --status 200
         triage.py --path WebLogs/ --uripath-keyword "upload" --time-offset 300 --request-count 1000
         triage.py --path WebLogs/host1* --ignore-status-code 200 404 500 302 400 403 401 301 --ignore-extension php js
-        triage.py --path WebLogs --referrer fofa.info --ua "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0" --email terry.schnitzel@gmail.com
+        triage.py --path WebLogs --referrer fofa.info --ua "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Gecko/20100101 Firefox/120.0" --email terry.schnitzel@gmail.com
     """),
     formatter_class=argparse.RawDescriptionHelpFormatter
     )

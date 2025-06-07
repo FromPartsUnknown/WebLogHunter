@@ -1,31 +1,33 @@
-# WebLog Triage
+<h1 align="center">WebLog Triage</h1>
 
-Analysing large volumes of web server access logs to identify malicious behaviour is tedious and error-prone. WebLogTriage helps streamline this process.
+<p align="center">Analysing large volumes of web server access logs to identify malicious behaviour is tedious and error-prone. WebLogTriage helps streamline this process.</p>
 
-WebLogTriage is a tool for parsing and analysing web server access logs to detect suspicious activity. It normalises logs into a standard DataFrame format for efficient querying and applies risk-scoring rules to highlight potential threats.
+<p align="center">
+  <img src="docs/logo.jpg" alt="WebLogTriage Logo" height="300"/>
+</p>
 
-User-defined Sigma-style rules and detection signatures help uncover scanning tools, webshells, and other malicious patterns.
+<p align="center">WebLogTriage is a tool for parsing and analysing web server access logs to detect suspicious activity. It normalises logs into a standard DataFrame format for efficient querying and applies risk-scoring rules to highlight potential threats. User-defined Sigma-style rules and detection signatures help uncover scanning tools, webshells, and other malicious patterns.</p>
 
-## Features
+## 🌟 Features
 
-- **Log Parsing**: Supports 6 access log formats including Apache and Nginx, converting them into a unified Pandas DataFrame for structured analysis.
+- 🔎 **Log Parsing**: Supports 6 access log formats including Apache and Nginx, converting them into a unified Pandas DataFrame for structured analysis.
 
-- **User Defined Rules**: Applies custom rules (defined in `rules.yaml`) to detect threats based on fields like IP, URI path, status code, user-agent, and more. Matching entries are tagged with a rule name and risk score.
+- 🛠 **User Defined Rules**: Applies custom rules (defined in `rules.yaml`) to detect threats based on fields like IP, URI path, status code, user-agent, and more. Matching entries are tagged with a rule name and risk score.
 
-- **Malicious Tool Detection**: Detects common web scanners (e.g., DirSearch) using patterns defined in `config.yaml`. Known webshell paths listed in `shells.txt` are flagged.
+- 💀 **Malicious Tool Detection**: Detects common web scanners (e.g., DirSearch) using patterns defined in `config.yaml`. Known webshell paths listed in `shells.txt` are flagged.
 
-- **Flexible Filtering**: Supports queries by URI keywords, IP addresses (including CIDR ranges), HTTP methods, HTTP status codes, timestamp ranges, and more. See Usage section for examples. 
+- ✂ **Flexible Filtering**: Supports queries by URI keywords, IP addresses (including CIDR ranges), HTTP methods, HTTP status codes, timestamp ranges, and more. See Usage section for examples. 
 
-- **Timestamp Clustering**: Detects gaps between timestamps and clusters related activity into distinct sessions. Terminal output highlights a new session in blue. 
+- 🥞 **Timestamp Clustering**: Detects gaps between timestamps and clusters related activity into distinct sessions. Terminal output highlights a new session in blue. 
 
-- **Output Options**
+- 💻 **Output Options**
   - Terminal output with colured highlights for quick inspection
   - CSV output for in-depth analysis
   - Email support for sending reports
   - Optional filtering of static files (.js, .css, etc)
 
 
-## Installation
+## 💾 Installation
 
 Install WebLogTriage using pip:
 
@@ -35,7 +37,7 @@ pip install .
 
 Ensure `config.yaml`, `rules.yaml`, and `shells.txt` are present. See [Configuration](#configuration) for details.
 
-## Configuration
+## ⚙️ Configuration
 
 - **`config.yaml`**: Specifies configuration options, including settings for risk score calculation such as sensitive paths like `/admin` and extensions like `.sql`. Tool signature definition for detecting scanners like DirSearch. See `config.yaml` for examples.
 
@@ -43,7 +45,7 @@ Ensure `config.yaml`, `rules.yaml`, and `shells.txt` are present. See [Configura
 
 - **`shells.txt`**: A list of known webshell filenames (e.g., `cmd.php`, `wshell.jsp`), used for URI risk detection.
 
-## Usage
+## 🚀 Usage
 
 Run via the main script:
 
@@ -92,10 +94,10 @@ Run via the main script:
 
 8. **Filter by Referrer and User Agent, Email Results** - Identify logs with a specific referrer and user agent, emailing results in CSV format:
    ```bash
-   ./triage.py --path WebLogs --referrer fofa.info --ua "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0" --email terry.uppercut@gmail.com
+   ./triage.py --path WebLogs --referrer fofa.info --ua "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Gecko/20100101 Firefox/120.0" --email terry.uppercut@gmail.com
    ```
 
-## Output
+## 💻 Output
 
 - **Terminal Output** (default): Provides a concise overview of log entries, truncating some fields for readability. Ideal for exploring data and identifying entries of interest. Use (`--cluster-off`) to turn off session clustering and order by timestamp instead. 
 - **CSV Output** (`--output-format csv`): Includes all fields without truncation or clustering, suitable for detailed analysis or reporting.
