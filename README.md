@@ -6,7 +6,11 @@
   <img src="docs/logo.jpg" alt="WebLogTriage Logo" height="300"/>
 </p>
 
-<p align="center">WebLogTriage is a tool for parsing and analysing web server access logs to detect suspicious activity. It normalises logs into a standard DataFrame format for efficient querying and applies risk-scoring rules to highlight potential threats. User-defined Sigma-style rules and detection signatures help uncover scanning tools, webshells, and other malicious patterns.</p>
+<p align="center">WebLogTriage is a tool for parsing and analysing web server access logs to detect suspicious activity. It normalises logs into a standard DataFrame format for efficient querying and applies risk-scoring rules to highlight potential threats. User-defined rules and detection signatures help uncover scanning tools, webshells, and other malicious patterns.</p>
+
+<p align="center">
+  <img src="docs/screenshot1.jpg" alt="WebLogTriage Logo" height="300"/>
+</p>
 
 ## 🌟 Features
 
@@ -50,56 +54,56 @@ Ensure `config.yaml`, `rules.yaml`, and `shells.txt` are present. See [Configura
 Run via the main script:
 
 ```bash
-./triage.py --help
+triage.py --help
 ```
 
 ### Examples
 
 1. **Analyse Logs with Default Settings** - Process all logs in a directory, apply rules from `rules.yaml`, detect scanning tools, and filter out static file extensions:
    ```bash
-   ./triage.py --path WebLogs/ |less -R
+   triage.py --path WebLogs/ |less -R
    ```
 
 2. **Filter High-Risk Entries** -
    Show entries with a risk score of 70 or higher (based on `rules.yaml`):
    ```bash
-   ./triage.py --path WebLogs/accesslog1.txt --risk-score 70 |less -R
+   triage.py --path WebLogs/accesslog1.txt --risk-score 70 |less -R
    ```
 
 3. **Focus on Scanning Tool Activity** - Display an overview of detected malicious scanning tools and related log entries:
    ```bash
-   ./triage.py --path WebLogs/ --tool-focus
-   ./triage.py --path WebLogs/ --tool-focus --output-format csv
+   triage.py --path WebLogs/ --tool-focus
+   triage.py --path WebLogs/ --tool-focus --output-format csv
    ```
 
 4. **Filter PUT Requests by IP and Output to CSV** - Extract successful PUT requests from specific IPs or CIDR ranges, outputting full details in CSV format:
    ```bash
-   ./triage.py --path WebLogs/ --method PUT --ip 192.168.1.1 10.10.10.0/24 --status 200 --output-format csv
+   triage.py --path WebLogs/ --method PUT --ip 192.168.1.1 10.10.10.0/24 --status 200 --output-format csv
    ```
 
 5. **Filter POST Requests by Time Range** - Show successful POST requests within a specific time window:
    ```bash
-   ./triage.py --path WebLogs/ --start-time "2025-04-21 18:23:00+10" --end-time "2025-04-21 18:24:00+10" --method POST --status 200
+   triage.py --path WebLogs/ --start-time "2025-04-21 18:23:00+10" --end-time "2025-04-21 18:24:00+10" --method POST --status 200
    ```
 
 6. **Search for Suspicious URIs with High Request Counts** - Filter logs for URIs containing “upload” with over 1000 requests, adjusting timestamps by 300 seconds (5 minutes) to correct any time skew in logs:
    ```bash
-   ./triage.py --path WebLogs/ --uripath-keyword "upload" --time-offset 300 --request-count 1000
+   triage.py --path WebLogs/ --uripath-keyword "upload" --time-offset 300 --request-count 1000
    ```
 
 7. **Identify Logs with Uncommon Status Codes** - Exclude common HTTP status codes and limit static file filtering to `.php` and `.js`:
    ```bash
-   ./triage.py --path WebLogs/fj* --ignore-status-code 200 404 500 302 400 403 401 301 --ignore-extension php js
+   triage.py --path WebLogs/access* --ignore-status-code 200 404 500 302 400 403 401 301 --ignore-extension php js
    ```
 
 8. **Filter by Referrer and User Agent, Email Results** - Identify logs with a specific referrer and user agent, emailing results in CSV format:
    ```bash
-   ./triage.py --path WebLogs --referrer fofa.info --ua "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Gecko/20100101 Firefox/120.0" --email terry.uppercut@gmail.com
+   triage.py --path WebLogs --referrer fofa.info --ua "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Gecko/20100101 Firefox/120.0" --email terry.uppercut+gh@gmail.com
    ```
 
 ## 💻 Output
 
-- **Terminal Output** (default): Provides a concise overview of log entries, truncating some fields for readability. Ideal for exploring data and identifying entries of interest. Use (`--cluster-off`) to turn off session clustering and order by timestamp instead. 
+- **Terminal Output** (default): Provides a concise overview of log entries by truncating some fields for readability. Ideal for exploring data and identifying entries of interest. Use (`--cluster-off`) to turn off session clustering and order by timestamp instead. 
 - **CSV Output** (`--output-format csv`): Includes all fields without truncation or clustering, suitable for detailed analysis or reporting.
 - **Email** - With the --email option, send results to an address in CSV format.
 
