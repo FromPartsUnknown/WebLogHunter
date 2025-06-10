@@ -8,9 +8,6 @@
 
 <p align="center">WebLogTriage is a tool for parsing and analysing web server access logs to detect suspicious activity. It normalises logs into a standard DataFrame format for efficient querying and applies risk-scoring rules to highlight potential threats. User-defined rules and detection signatures help uncover scanning tools, webshells, and other malicious patterns.</p>
 
-<p align="center">
-  <img src="docs/screenshot1.jpg" alt="WebLogTriage Logo" height="300"/>
-</p>
 
 ## 🌟 Features
 
