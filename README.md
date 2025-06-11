@@ -1,12 +1,12 @@
-<h1 align="center">WebLog Triage</h1>
+<h1 align="center">WebLog Hunter</h1>
 
-<p align="center">Analysing large volumes of web server access logs to identify malicious behaviour is tedious and error-prone. WebLogTriage helps streamline this process.</p>
+<p align="center">Analysing large volumes of web server access logs to identify malicious behaviour is tedious and error-prone. WebLogHunter helps streamline this process.</p>
 
 <p align="center">
-  <img src="docs/logo.jpg" alt="WebLogTriage Logo" height="300"/>
+  <img src="docs/logo.jpg" alt="WebLogHunter Logo" height="300"/>
 </p>
 
-<p align="center">WebLogTriage is a tool for parsing and analysing web server access logs to detect suspicious activity. It normalises logs into a standard DataFrame format for efficient querying and applies risk-scoring rules to highlight potential threats. User-defined rules and detection signatures help uncover scanning tools, webshells, and other malicious patterns.</p>
+<p align="center">WebLogHunter is a tool for parsing and analysing web server access logs to detect suspicious activity. It normalises logs into a standard DataFrame format for efficient querying and applies risk-scoring rules to highlight potential threats. User-defined rules and detection signatures help uncover scanning tools, webshells, and other malicious patterns.</p>
 
 
 ## 🌟 Features
@@ -30,7 +30,7 @@
 
 ## 💾 Installation
 
-Install WebLogTriage using pip:
+Install WebLogHunter using pip:
 
 ```bash
 pip install .

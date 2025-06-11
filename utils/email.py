@@ -28,7 +28,7 @@ class Email():
         self._msg = MIMEMultipart()
         self._msg['From'] = self._sender
         self._msg['To'] = ', '.join(self._recipients)
-        self._msg['Subject'] = f'WeblogTriage Report: {timestamp}'
+        self._msg['Subject'] = f'WeblogHunter Report: {timestamp}'
 
         if body:
             self.body(body)

@@ -1,5 +1,5 @@
 [project]
-name = "WebLogTriage"
+name = "WebLogHunter"
 version = "1.0.1"
 description = "A tool to triage web server logs for suspicious activity."
 readme = "README.md"

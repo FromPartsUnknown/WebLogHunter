@@ -1,4 +1,4 @@
-# This file defines rules for identifying suspicious web log entries in WebLogTriage.
+# This file defines rules for identifying suspicious web log entries in WebLogHunter.
 # Rules follow a Sigma-style format to detect patterns in log attributes (e.g., IP, URI, 
 # status). Upon identification a risk score is assigned to highlight potential threats.
 #
