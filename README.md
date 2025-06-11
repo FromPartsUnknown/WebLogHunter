@@ -8,10 +8,6 @@
 
 <p align="center">WebLogHunter is a tool for parsing and analysing web server access logs to detect suspicious activity. It normalises logs into a standard DataFrame format for efficient querying and applies risk-scoring rules to highlight potential threats. User-defined rules and detection signatures help uncover scanning tools, webshells, and other malicious patterns.</p>
 
-<p align="center">
-<img src="https://github.com/user-attachments/assets/1597e0c1-9446-4410-82a8-bfd635424f41">
-</p>
-
 ## 🌟 Features
 
 - 🔎 **Log Parsing**: Supports 6 access log formats including Apache and Nginx, converting them into a unified Pandas DataFrame for structured analysis.
@@ -30,6 +26,9 @@
   - Email support for sending reports
   - Optional filtering of static files (.js, .css, etc)
 
+<p align="center">
+<img src="https://github.com/user-attachments/assets/1597e0c1-9446-4410-82a8-bfd635424f41">
+</p>
 
 ## 💾 Installation
 
