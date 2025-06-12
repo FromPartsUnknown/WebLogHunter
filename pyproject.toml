@@ -1,6 +1,6 @@
 [project]
 name = "WebLogHunter"
-version = "1.0.1"
+version = "1.0.2"
 description = "A tool to triage web server logs for suspicious activity."
 readme = "README.md"
 license = {file = "LICENSE"}

@@ -29,6 +29,14 @@ def main():
         nargs="+",
         help="Path to the log file or directory to analyse."
     )
+
+    parser.add_argument(
+        "--rules-path",
+        type=str,
+        default=config.rules_path,
+        help="Path to user-defined rules file (rules.yaml)."
+    )  
+
     parser.add_argument(
         "--time-offset",
         type=int,
@@ -41,6 +49,7 @@ def main():
         action="store_true",
         help="Display entries identified as scanning tool related activity"
     )
+
 
     parser.add_argument(
         "--cluster-off",
@@ -101,6 +110,20 @@ def main():
         nargs="+",
         help="Status codes to exclude from results (e.g., 200 404 500 for common codes)."
     )
+
+    parser.add_argument(
+        "--cluster-id",
+        type=int,
+        nargs="+",
+        help="Cluster ID"
+    )
+
+    parser.add_argument(
+        "--ignore-cluster-id",
+        type=int,
+        nargs="+",
+        help="Cluster ID"
+    )    
 
     parser.add_argument(
         "--min-size",
@@ -211,7 +234,7 @@ def main():
             config.tool_signatures, 
             config.uri_risk_paths, 
             config.uri_risk_extensions,
-            config.rules_path,
+            args.rules_path,
             config.webshell_path
         )
 
@@ -234,7 +257,9 @@ def main():
             args.ua, args.ignore_ua,
             args.referrer, args.ignore_referrer,
             args.min_size, args.max_size,
-            args.tool_focus
+            args.tool_focus,
+            args.cluster_id,
+            args.ignore_cluster_id
         )
 
         if args.email:

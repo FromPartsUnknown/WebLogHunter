@@ -11,8 +11,10 @@ access_log_formats = [
     ("apache extended", r'^(?P<ip>\S+) \S+ \S+ \[(?P<timestamp>\d{2}/[A-Za-z]{3}/\d{4}:\d{2}:\d{2}:\d{2}\s[+-]\d{4})\] "(?P<method>[A-Z]+) (?P<request_uri>[^ ]+) HTTP/[0-9.]+" (?P<status>\d{3}) (?P<resp_size>\d+) "(?P<referrer>.*?|-)" "(?P<user_agent>.*?|-)" "(?P<extra>.*?|-)"$'),
     ("clf", r'^(?P<ip>\S+) \S+ \S+ \[(?P<timestamp>\d{2}/[A-Za-z]{3}/\d{4}:\d{2}:\d{2}:\d{2}\s[+-]\d{4})\] "(?P<method>[A-Z]+) (?P<request_uri>[^ ]+) HTTP/[0-9.]+" (?P<status>\d{3}) (?P<resp_size>\d+|-)$'),
     ("unknown", r'^\S+ \S+ \S+ (?P<ip>\S+) \S+ \S+ \[(?P<timestamp>\d{2}/[A-Za-z]{3}/\d{4}:\d{2}:\d{2}:\d{2}\s[+-]\d{4})\] "(?P<method>[A-Z]+) (?P<request_uri>[^ ]+) HTTP/[0-9.]+" (?P<status>\d{3}) (?P<resp_size>\d+)$'),
-    ("nginx", r'^(?P<ip>\S+) \S+ \S+ \[(?P<timestamp>\d{2}/[A-Za-z]{3}/\d{4}:\d{2}:\d{2}:\d{2}\s[+-]\d{4})\] "(?P<method>[A-Z]+) (?P<request_uri>[^ ]+) HTTP/[0-9.]+" (?P<status>\d{3}) (?P<resp_size>\d+) "(?P<referrer>[^"]*)" "(?P<user_agent>.*?|-)"$')
+    ("nginx", r'^(?P<ip>\S+) \S+ \S+ \[(?P<timestamp>\d{2}/[A-Za-z]{3}/\d{4}:\d{2}:\d{2}:\d{2}\s[+-]\d{4})\] "(?P<method>[A-Z]+) (?P<request_uri>[^ ]+) HTTP/[0-9.]+" (?P<status>\d{3}) (?P<resp_size>\d+) "(?P<referrer>[^"]*)" "(?P<user_agent>.*?|-)"$'),
 #    ("apache_ssl", r'^\[(?P<timestamp>\d{2}/[A-Za-z]{3}/\d{4}:\d{2}:\d{2}:\d{2}\s[+-]\d{4})\] (?P<ip>\S+) (?P<extra>[^"]+) "(?P<method>[A-Z]+) (?P<request_uri>[^ ]+) HTTP/[0-9.]+" (?P<resp_size>\d+|-)$')
+    ("iis", r'^(?P<timestamp>\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2})\s+\S+\s+(?P<method>[A-Z]+)\s+(?P<request_uri>\S+)\s+\S+\s+\d+\s+\S+\s+(?P<ip>\S+)\s+(?P<user_agent>\S+)\s+(?P<referrer>\S+|-)\s+(?P<status>\d{3})\s+\d+\s+\d+\s+(?P<resp_size>\d+)$'),
+    ("iis_custom_1", r'^(?P<timestamp>\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2})\s+\S+\s+\S+\s+\S+\s+(?P<method>[A-Z]+)\s+(?P<request_uri>\S+)\s+\S+\s+\d+\s+\S+\s+(?P<ip>\S+)\s+(?P<user_agent>\S+)\s+(?P<referrer>\S+)\s+(?P<status>\d{3})\s+\d+\s+\d+\s+(?P<time_taken>\d+)$')
 ]
 
 class AccessLogParserError(Exception):

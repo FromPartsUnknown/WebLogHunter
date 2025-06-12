@@ -39,7 +39,7 @@ class AccessLogDataFrame:
         ('request_count',    'Count',             6, OUTPUT_ALL),
         ('risk_score',       'Score',             6, OUTPUT_ALL),
         ('rule_applied',     'Rule',             15, OUTPUT_ALL|OUTPUT_RISK_WRAP),
-        ('cluster',          'Cluster ID',        6, OUTPUT_CSV),
+        ('cluster',          'CID',               4, OUTPUT_ALL),
         ('tool',             'TID',               6, OUTPUT_ALL),
         ('tool_name',        'Tool Name',        15, OUTPUT_CSV),
         ('tool_desc',        'Tool Description', 30, OUTPUT_CSV),
@@ -62,12 +62,16 @@ class AccessLogDataFrame:
 
             self._remove_dups()
             self._set_utc_time(time_offset)
+
+            # Cluster
+            self._df = self._cluster()
         
             self._logger.info("[*] Counting repeat requests for source, ip, uri pairs.")
             count = self._df.groupby(
                 [
                     'source',
                     'ip',
+                    'cluster',
                     'method',
                     'request_uri', 
                 ]
@@ -76,7 +80,8 @@ class AccessLogDataFrame:
             self._df = self._df.merge(count, 
                 on=[
                     'source',                 
-                    'ip',    
+                    'ip',
+                    'cluster',    
                     'method',             
                     'request_uri',      
                 ], 
@@ -197,50 +202,77 @@ class AccessLogDataFrame:
         except Exception as e:
             raise AccessLogDataFrameError(f"Duplicate removal failed: {str(e)}") from e
 
+
+
     def _set_utc_time(self, time_offset):
         try:
+            
             if self._df['timestamp'].isna().any():
-                raise ValueError("timestamp contains null value")
-            
-            ts_pattern = r'(\d{2}/[A-Za-z]{3}/\d{4}:\d{2}:\d{2}:\d{2}\s(?:[+-]\d{4}|UTC|[A-Za-z]+))'
-            ts_invalid = self._df[~self._df['timestamp'].str.match(ts_pattern, na=False)]
-            if not ts_invalid.empty:
-                raise ValueError(f"Invalid timestamp format:\n{ts_invalid}")
-            
-            self._df['utc_timestamp'] = \
-                pd.to_datetime(self._df['timestamp'], 
-                format='%d/%b/%Y:%H:%M:%S %z', 
-                utc=True, errors='coerce') + \
-            pd.Timedelta(seconds=time_offset)
+                is_null_mask = self._df['timestamp'].isna()
+                invalid_rows = self._df[is_null_mask]
+                raise ValueError(f"Initial parsing failed, resulting in null timestamps:\n{invalid_rows.to_string()}")
+
+            iis_mask    = self._df['timestamp'].str.match(r'^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$', na=False)
+            apache_mask = self._df['timestamp'].str.match(r'^\d{2}/[A-Za-z]{3}/\d{4}:\d{2}:\d{2}:\d{2}\s(?:[+-]\d{4}|UTC|[A-Za-z]+)$', na=False)
+
+            unmatched_rows = self._df[~(iis_mask | apache_mask)]
+            if not unmatched_rows.empty:
+                raise ValueError(f"Found timestamps with an unknown or invalid format:\n{unmatched_rows.to_string()}")
+
+            self._df['utc_timestamp'] = pd.Series(index=self._df.index, dtype='datetime64[ns, UTC]')
+
+            if apache_mask.any():
+                self._df.loc[apache_mask, 'utc_timestamp'] = pd.to_datetime(
+                    self._df.loc[apache_mask, 'timestamp'],
+                    format='%d/%b/%Y:%H:%M:%S %z',
+                    utc=True,
+                    errors='raise'
+                )
+
+            if iis_mask.any():
+                self._df.loc[iis_mask, 'utc_timestamp'] = pd.to_datetime(
+                    self._df.loc[iis_mask, 'timestamp'],
+                    utc=True,
+                    errors='raise'
+                )
+
+            if time_offset != 0:
+                self._df['utc_timestamp'] += pd.Timedelta(seconds=time_offset)
 
             if self._df['utc_timestamp'].isna().any():
-                null_rows = self._df[self._df['utc_timestamp'].isna()]
-                raise AccessLogDataFrameError(f"utc_timestamp contains null value: {null_rows}")
+                failed_rows = self._df[self._df['utc_timestamp'].isna()]
+                raise AccessLogDataFrameError(f"An unexpected error occurred, leaving null utc_timestamps:\n{failed_rows.to_string()}")
+
+        except (ValueError, AccessLogDataFrameError) as e:
+            raise e
         except Exception as e:
-           raise ValueError(f"Failed to convert timestamp: {str(e)}") from e
+           raise ValueError(f"An unexpected error occurred during timestamp conversion: {str(e)}") from e
+
   
     def filter(
         self,
-        start_time       = None,
-        end_time         = None,
-        risk_score       = 0, 
-        request_count    = 0,
-        status_ignore    = None, 
-        status_include   = None, 
-        method_include   = None,
-        method_ignore    = None,
-        uri_include      = None, 
-        all_extension    = None,
-        extension_ignore = None,
-        ip_include       = None,
-        ip_ignore        = None,
-        ua_include       = None,
-        ua_ignore        = None,
-        ref_include      = None,
-        ref_ignore       = None,
-        min_size         = None,
-        max_size         = None,
-        tools_present    = False
+        start_time         = None,
+        end_time           = None,
+        risk_score         = 0, 
+        request_count      = 0,
+        status_ignore      = None, 
+        status_include     = None, 
+        method_include     = None,
+        method_ignore      = None,
+        uri_include        = None, 
+        all_extension      = None,
+        extension_ignore   = None,
+        ip_include         = None,
+        ip_ignore          = None,
+        ua_include         = None,
+        ua_ignore          = None,
+        ref_include        = None,
+        ref_ignore         = None,
+        min_size           = None,
+        max_size           = None,
+        tools_present      = False,
+        cluster_id_include = None,
+        cluster_id_ignore  = None
     ):     
         try:
             
@@ -263,6 +295,11 @@ class AccessLogDataFrame:
                 raise ValueError(f"Bad status ignore value: {status_ignore}")
             if status_include and (not (isinstance(status_include, list) and all(isinstance(x, int) for x in status_include))):
                 raise ValueError(f"Bad status ignore value: {status_ignore}")
+            if cluster_id_include and (not (isinstance(cluster_id_include, list) and all(isinstance(x, int) for x in cluster_id_include))):
+                raise ValueError(f"Bad cluster id value: {cluster_id_include}")
+            if cluster_id_ignore and (not (isinstance(cluster_id_ignore, list) and all(isinstance(x, int) for x in cluster_id_ignore))):
+                raise ValueError(f"Bad cluster id value: {cluster_id_ignore}")
+
             try:
                 if start_time:
                     s_time = pd.to_datetime(start_time, utc=True) 
@@ -271,6 +308,10 @@ class AccessLogDataFrame:
             except ValueError as e:
                 raise ValueError(f"Invalid format for {start_time} or {end_time}.")
 
+            if cluster_id_include:
+                mask &= self._f_df['cluster'].isin(cluster_id_include)
+            if cluster_id_ignore:
+                mask &= ~self._f_df['cluster'].isin(cluster_id_ignore)
             if start_time:
                 mask &= self._f_df['utc_timestamp'] >= s_time
             if end_time:
@@ -446,10 +487,6 @@ class AccessLogDataFrame:
     
     def _render_as_table(self):
         try:
-
-            if self._cluster_enabled:
-                self._cluster()
-
             display_config = self._column_filter()
             if self._f_df.empty or display_config == None:
                 ValueError("DataFrame or display config is empty")
@@ -467,7 +504,7 @@ class AccessLogDataFrame:
            
             row_count = len(df)
             if row_count > 30000:
-                print(f"[*] Processing {row_count} entries. This can take a short while to display.", flush=True)
+                print(f"[*] Processing {row_count} entries. Clustering enabled: {self._cluster_enabled}. This can take a short while to display.", flush=True)
 
             if self._cluster_enabled:
                 prev_row = {'ip': None, 'source': None, 'cluster': None}
@@ -563,73 +600,58 @@ class AccessLogDataFrame:
         return field
     
 
-    def _cluster(self, threshold=300):
+
+    def _cluster(self, threshold=60):
         try:
-            if self._f_df is None or self._f_df.empty:
+            if self._df is None or self._df.empty:
                 self._logger.warning("DataFrame is empty, skipping clustering.")
-                return self._f_df if self._f_df is not None else pd.DataFrame()
+                return self._df if self._df is not None else pd.DataFrame()
 
-            self._logger.info(f"[*] Clustering {len(self._f_df)} records. Threshold X = {threshold}.")
-            df = self._f_df.copy()
-    
-            req_cols  = ['source', 'ip', 'utc_timestamp', 'status']
-            miss_cols = [col for col in req_cols if col not in df.columns]
-            if miss_cols:
-                raise ValueError(f"Missing required columns for clustering: {miss_cols}")
+            self._logger.info(f"[*] Clustering {len(self._df)} records. Threshold X = {threshold} seconds.")
+            df = self._df.copy()
 
-            mask = df['utc_timestamp'].notna()
-            if not mask.all():
-                raise ValueError(f"{(~mask).sum()} NaT values in 'utc_timestamp'")
-            
-            df['unix_timestamp'] = pd.NA 
-            df.loc[mask, 'unix_timestamp'] = df.loc[mask, 'utc_timestamp'].astype(np.int64) // 1_000_000_000
-            df['unix_timestamp'] = pd.to_numeric(df['unix_timestamp'], errors='coerce')
+            req_cols = ['source', 'ip', 'utc_timestamp', 'status']
+            if not all(col in df.columns for col in req_cols):
+                raise ValueError(f"Missing required columns for clustering: {set(req_cols) - set(df.columns)}")
 
-          
-            df_diff = df.sort_values(['source', 'ip', 'unix_timestamp'])
-            df['time_delta'] = df_diff.groupby(['source', 'ip'])['unix_timestamp'].diff().fillna(0)
-           
+            if df['utc_timestamp'].notna().all() == False:
+                raise ValueError(f"{(~df['utc_timestamp'].notna()).sum()} NaT values in 'utc_timestamp'")
+
+            df['unix_timestamp'] = df['utc_timestamp'].astype(np.int64) // 1_000_000_000
+            #status_code = pd.to_numeric(df['status'], errors='coerce').fillna(0)
+            #df['is_success'] = ((status_code == 200) | (status_code.between(300, 399))).astype(int)
+
+            sort_cols = ['source', 'ip', 'unix_timestamp']
+            df.sort_values(by=sort_cols, inplace=True)
+
+            df['time_delta'] = df.groupby(['source', 'ip'])['unix_timestamp'].diff().fillna(0)
+            #df['prev_is_success'] = df.groupby(['source', 'ip'])['is_success'].shift(1).fillna(0)
+
             X = threshold
-            try:
-                status_code = pd.to_numeric(df['status'], errors='coerce').fillna(0)
-            except Exception:
-                raise ValueError("Could not convert 'status' to numeric")
+            #both_success = (df['is_success'] == 1) & (df['prev_is_success'] == 1)
+            # same_cluster = (df['time_delta'] < X) | (both_success & (df['time_delta'] < 2 * X))
+            same_cluster = (df['time_delta'] < X)
 
-            df['is_success'] = ((status_code == 200) | \
-                               ((status_code >= 300) & (status_code < 400))).astype(int)
-            
-            df = df.sort_values(['source', 'ip', 'unix_timestamp']) 
-            df['prev_is_success'] = df.groupby(['source', 'ip'], sort=False)['is_success'].shift(1).fillna(0)
-
-            both_success = (df['is_success'] == 1) & (df['prev_is_success'] == 1)
-            same_cluster = (df['time_delta'] < X) | \
-                                        (both_success & (df['time_delta'] < 2 * X))
             df['new_cluster'] = (~same_cluster).astype(int)
-            df['local_cluster'] = df.groupby(['source', 'ip'], sort=False)['new_cluster'].cumsum()
+            df['local_cluster'] = df.groupby(['source', 'ip'])['new_cluster'].cumsum()
             
-            cluster_strings = df['source'].astype(str) + "_" + \
-                              df['ip'].astype(str) + "_" + \
-                              df['local_cluster'].astype(str)
-            
-            df['cluster'] = pd.factorize(cluster_strings)[0] 
-            
-            cluster_min_timestamps = df.groupby('cluster')['unix_timestamp'].transform('min')
-            df['final_cluster_min_timestamp'] = cluster_min_timestamps
+            cluster_strings = df['source'].astype(str) + "_" + df['ip'].astype(str) + "_" + df['local_cluster'].astype(str)
+            df['cluster'] = pd.factorize(cluster_strings)[0]
 
-            df = df.sort_values(
-                by=['final_cluster_min_timestamp', 'cluster', 'unix_timestamp'],
-                na_position='last'
+            df['cluster_start_time'] = df.groupby('cluster')['unix_timestamp'].transform('min')
+
+            df.sort_values(
+                by=['cluster_start_time', 'unix_timestamp'],
+                inplace=True
             )
-            
-            cols_to_drop = ['unix_timestamp', 'final_cluster_min_timestamp', 'time_delta',
+
+            cols_to_drop = ['unix_timestamp', 'cluster_start_time', 'time_delta',
                             'new_cluster', 'prev_is_success', 'local_cluster', 'is_success']
-            df = df.drop(columns=cols_to_drop, errors='ignore')
-    
-            self._logger.debug("Vectorised clustering complete. DataFrame ordered by earliest cluster timestamp.")
-            
-            self._f_df = df
+            df.drop(columns=cols_to_drop, errors='ignore', inplace=True)
+
+            self._logger.debug("Clustering complete. DataFrame ordered by earliest cluster.")
             return df
-        
+
         except ValueError as e:
             raise AccessLogDataFrameError(f"Validation error in clustering: {str(e)}") from e
         except Exception as e:

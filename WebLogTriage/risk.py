@@ -317,7 +317,7 @@ class AccessLogRisk:
                 with open(filename) as fp:
                     self._bad_shells = set(line.strip() for line in fp if line.strip() and not line.startswith('#'))
             if self._extract_filename(uri) in self._bad_shells:
-                self._logger.debug(f"Found known webshell name in {uri}")
+                self._logger.info(f"Found known webshell name in {uri}")
                 return True 
         except OSError:
             raise AccessLogRiskError(f"Failed to open shells.txt")
@@ -330,57 +330,60 @@ class AccessLogRisk:
         clean_uri = decoded_uri.split('?', 1)[0]
         filename = os.path.basename(clean_uri)
         return filename
-            
 
 
-    def burp_intruder(self, df, risk_score=95.0):
+    def burp_intruder(self, df, risk_score=95.0, min_requests=100, max_gap_seconds=1.0):
         try:
+            self._logger.info(f"[*] Scanning for Burp Intruder pattern.")
+            required_cols = ['utc_timestamp', 'source', 'status', 'method', 'ip', 'request_uri', 'cluster']
+            if not all(col in df.columns for col in required_cols):
+                raise ValueError(f"DataFrame is missing required columns: {set(required_cols) - set(df.columns)}")
 
-            self._logger.info("[*] Scanning for Burp Intruder pattern.")
-
-            cols = ['utc_timestamp', 'source', 'status', 'method', 'ip', 'request_uri']
-            if not all(col in df for col in cols):
-                raise ValueError(f"Missing required columns: {set(cols) - set(df.columns)}")
-            if df[cols].isna().any(axis=None):
-                raise ValueError(f"DataFrame contains at least one null value")
-            
-            status_500 = df[(df['status'] == 500) & 
-                            (df['method'] == 'POST')]
+            status_500 = df[df['status'] == 500].copy()
             if status_500.empty:
                 return df
+
+            group_cols = ['source', 'ip', 'cluster', 'request_uri', 'method']   
+            status_500.sort_values(by=group_cols + ['utc_timestamp'], inplace=True)
+            time_diff = status_500.groupby(group_cols)['utc_timestamp'].diff()
+            is_new_burst = (time_diff > pd.Timedelta(seconds=max_gap_seconds))
+
+            status_500['burst_id'] = is_new_burst.groupby([status_500[col] for col in group_cols]).cumsum()
             
-            min_timestamp = status_500['utc_timestamp'].min()
-            max_timestamp = status_500['utc_timestamp'].max()
-            
-            pairs = status_500[status_500['request_uri'] != '/'][['source', 'ip', 'request_uri', 'method']]\
-                .drop_duplicates().values.tolist()
-            if not pairs:
+            burst_group_cols = group_cols + ['burst_id']
+            burst_stats = status_500.groupby(burst_group_cols)['utc_timestamp'].agg(
+                burst_count='size',
+                min_time='min',
+                max_time='max'
+            ).reset_index()
+
+            sus_bursts = burst_stats[burst_stats['burst_count'] >= min_requests]
+            if sus_bursts.empty:
                 return df
             
-            status_200 = df[(df['status'] == 200) & 
-                            (df['utc_timestamp'] >= min_timestamp) & 
-                            (df['utc_timestamp'] <= max_timestamp)]
-            if not status_200.empty:
-                match_indices = []
-                for source, ip, uri, method in pairs:
-                    match = status_200[
-                        (status_200['request_uri'] == uri) & 
-                        (status_200['source'] == source) & 
-                        (status_200['ip'] == ip)]
-                    if not match.empty:
-                        match_indices.extend(match.index.tolist())
-                if match_indices:
-                    df.loc[match_indices, 'risk_score'] = risk_score
-                    df.loc[match_indices, 'rule_applied'] = 'Burp Intruder Pattern'
-                    self._logger.debug(f"Burp Intruder pattern found:\n{df.loc[match_indices, ['source', 'ip', 'request_uri', 'status', 'request_count']]}")
+            for _, attack_burst in sus_bursts.iterrows():
+                source, cluster_id, ip, uri, method = attack_burst['source'], attack_burst['cluster'], attack_burst['ip'], attack_burst['request_uri'], attack_burst['method']
+                start_time = attack_burst['min_time']
+                
+                success_check = df[
+                    (df['status'] == 200) & (df['source'] == source) &
+                    (df['ip'] == ip) & (df['request_uri'] == uri) & (df['cluster'] == cluster_id) & 
+                    (df['utc_timestamp'] >= start_time) 
+                ]
+
+                if not success_check.empty:
+                    success_indices = success_check.index
+                    df.loc[success_indices, 'risk_score'] = risk_score 
+                    df.loc[success_indices, 'rule_applied'] = 'Attack Success After High-Frequency Server Failures'
+
         except Exception as e:
-            raise AccessLogRiskError(f"Failed to analyse Burp Intruder pattern: {str(e)}") from e 
+            raise AccessLogRiskError(f"Failed to analyse for attack bursts: {str(e)}") from e
+        
         return df
-    
 
     def tool_scanner(self, df_input):
         try:
-            cols = ['source', 'ip', 'request_uri', 'utc_timestamp']
+            cols = ['source', 'ip', 'request_uri', 'utc_timestamp', 'cluster']
             if not all(col in df_input for col in cols):
                 missing = set(cols) - set(df_input.columns)
                 raise ValueError(f"Missing required columns: {missing}")
@@ -420,7 +423,7 @@ class AccessLogRisk:
             
             assignments = []
             df_sorted = df.sort_values(['source', 'ip', 'unix_timestamp'])
-            group = df_sorted.groupby(['source', 'ip'], sort=False)
+            group = df_sorted.groupby(['source', 'ip', 'cluster'], sort=False)
 
             for group_key, group_df in group:
                 for tool_sigs in self._tool_signatures:
