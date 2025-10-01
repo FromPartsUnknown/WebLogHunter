@@ -16,7 +16,7 @@ class ConfigOptions:
                 raise ConfigOptionsError(f"Invalid yaml configuration {yaml_file}: {str(e)}") from e
             
             self.rules_path    = config_data.get('rules_path', str)
-            self.webshell_path = config_data.get('rules_path', str)
+            self.webshell_path = config_data.get('webshell_path', str)
 
             self.ignore_extensions = \
                 tuple(config_data.get('ignore_extensions', []))
